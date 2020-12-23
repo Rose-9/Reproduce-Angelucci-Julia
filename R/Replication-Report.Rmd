@@ -12,6 +12,7 @@ Abstract: This report contains reproduced main results from the paper writen by 
   Square approach on various dependent variables in newspaper industry. The minor
   differences between my result and the authors are explained futher in the report.
 ---
+Data and code can be found at https://github.com/Rose-9/Reproduce-Angelucci-Julia
 # Introduction
   In recent decades, the hard-copy newspaper industry has been stroke hard by technology progress.  While this direct negative effect on companies produce printed newspapers is obvious, the indirect impact on readers is just as profound.  The study on the response of newspaper companies toward the market change was set within a time period where a shock took place on the newspaper industry.  The shock refers to a new regulation announced by the French government, so now French can air advertisement on their televisions.  There are empirical evidences suggest that this relax on regulation has negative impact on newspaper advertising.  This further influences the content and readership of newspapers, since the advertising revenue as an essential component of the total revenue of newspaper producers, can restrain companies' budget on anything when it contracts.  
   The reactions of newspaper companies are captured under a difference-in-difference setting where the difference of newspaper content before and after the shock of decrease in advertising revenue is measured by the difference in national and local newspapers.  The fundamental differences between national and local newspapers is everywhere.  Primarily, there is a scale difference.  Considering fixed effects on the gap between local and national newspapers, the change in national newspapers is only in terms of relative to local newspaper. In the paper, only two fixed effects are included, one for different newspapers and the other for time trend.  
@@ -296,13 +297,8 @@ parallel<-huxreg("Panel A. Advertising revenues" = a,
        "Panel D. Circulation" = d,
        "Panel E. Number of journalists" = e,
        "Panel F. Newshole" = f,
-       "Panel G. 
-       Readership: 
-       Percent employees" = g,
-       "Panel H. 
-       Readership: 
-       Percent farmers 
-       and labourers" = h,
+       "Panel G. Fmployees" = g,
+       "Panel H. Farmers and Lourers" = h,
                        omit_coefs = omit_me,
                        number_format = 2) 
 parallel <- parallel %>% 
