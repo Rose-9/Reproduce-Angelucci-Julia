@@ -1,0 +1,298 @@
+---
+title: "A Replication of Angelucci, Charles, and Julia Cagé 2019. "
+author: "Zidong Yang"
+date: "December 22 2020"
+output:
+  pdf_document:
+    latex_engine: xelatex
+Keywords: Reproduction, Advertising, OLS, Media Industry, Microeconomics
+Abstract: This report contains reproduced main results from the paper writen by Angelucci, Charles, and Julia Cagé, "Newspapers in Times of Low Advertising Revenus". The
+  paper used a difference-in-difference analysis to capture the reaction of newspaper
+  companies to the decreasing advertising revenue.  I replicated the Ordinary Least
+  Square approach on various dependent variables in newspaper industry. The minor
+  differences between my result and the authors are explained futher in the report.
+---
+# Introduction
+  In recent decades, the hard-copy newspaper industry has been stroke hard by technology progress.  While this direct negative effect on companies produce printed newspapers is obvious, the indirect impact on readers is just as profound.  The study on the response of newspaper companies toward the market change was set within a time period where a shock took place on the newspaper industry.  The shock refers to a new regulation announced by the French government, so now French can air advertisement on their televisions.  There are empirical evidences suggest that this relax on regulation has negative impact on newspaper advertising.  This further influences the content and readership of newspapers, since the advertising revenue as an essential component of the total revenue of newspaper producers, can restrain companies' budget on anything when it contracts.  
+  The reactions of newspaper companies are captured under a difference-in-difference setting where the difference of newspaper content before and after the shock of decrease in advertising revenue is measured by the difference in national and local newspapers.  The fundamental differences between national and local newspapers is everywhere.  Primarily, there is a scale difference.  Considering fixed effects on the gap between local and national newspapers, the change in national newspapers is only in terms of relative to local newspaper. In the paper, only two fixed effects are included, one for different newspapers and the other for time trend.  
+```{r,include=FALSE}
+#install.packages("here")
+#install.packages("huxtable")
+
+library(here)
+library(haven)
+library(huxtable)
+library(scales)
+library(tidyverse)
+library(ggplot2)
+
+##read in the STATA .dta file
+newspapers <- read_dta(here::here("Data/dta/Angelucci_Cage_AEJMicro_dataset.dta"))
+##check the number of observations and variables included in the dataset.
+dim(newspapers)
+
+##select necessary variables for reproducing authors' main results
+newspapers <- 
+  newspapers %>% 
+  dplyr::select(year, id_news, after_national, local, national, pqr_trend, Had,# Diff in diff variables
+                ra_cst, qtotal, ads_p4_cst, ads_s, # Advertising side dependents
+                ps_cst, po_cst, qtotal, qs_s, rs_cst,#Reader side dependents
+                #Quality dependents
+                ln_nb_journ, ln_av_payroll_cst, ln_pages, ln_news_hole, ln_share_Hard, 
+                #Readership dependents for education panel
+                R_sh_edu_no_ipo, R_sh_edu_primaire_ipo, R_sh_edu_secondaire_ipo, R_sh_edu_sup_prof_ipo,
+                #Readership dependents for socio-professional panel
+                R_sh_pcs_agri_ipo, R_sh_pcs_patron_ipo, R_sh_pcs_cadre_ipo, R_sh_pcs_employes_ipo, 
+                R_sh_pcs_ouvriers_ipo, R_sh_pcs_inactifs_ipo, R_sh_pcs_agri_ouvriers_ipo, ln_qtotal,
+                ln_ra_cst, ln_ads_p4_cst, ln_ps_cst, ln_qs_s)  %>%  
+  mutate(ra_cst_div_qtotal = ra_cst / qtotal) %>% # An advertising side dependents needs to be built
+  mutate_at(vars(id_news, after_national, local, national), ~as.factor(.)) %>% # Change some to factors
+  mutate(year = as.integer(year))
+
+
+```
+# Data
+
+  The data used for replicating Angelucci, Charles, and Julia Cagé's result is the a panel dataset they digitized.  The panel data consists variables on local and national newspapers in France between 1960 and 1970.  There are five areas of dependent variables which will be used to investigate the treatment effect.  The price, circulation and revenues of those newspapers were collected from the French Ministry of Information's non-publicly available records in the National archives.  This information includes 68 local and all 12 national newspapers in France between 1960 and 1974.  However, the data of number of journalists which is a strong indicator for the quality as well as the quantity of journalistic-intensive content of newspapers only include information on 63 out of 68 local and 11 out of 12 national newspapers.   As for the variables that take account on the change in advertising revenues, advertising price and quantity data are collected from an annual publication, "Tarif Media".  The authors' choice of listed price could potentially over-represent the actual transaction price.  Especially under the influence of television advertisement, when newspaper companies adjust their advertising prices, some promotions can easily be overseen.  An assumption made here is that the gap between the listed price and transaction price is small and does not diverge over time.  It is important to treat the listed price with adjustment in order to increase the accuracy of our predication on changes when fitting the model using this data.  Also, to capture treatment effect on newspaper content, the newshole data is used.  For each newspapers, the ratio of soft and hard news on their front page is a systematically sample of the third week of March from 1964 to 1972.  Here, the authors made an extremely subjective scale to distinguish the soft news and hard news on the front page.  The distinguishing scale is technically a spectrum, and the standard varies base on readers' personal preferences.  This is something can not be measured, but can be generally described.  The readership data used by the paper describes readers' characteristics.  The source for this data (CESP) publishes every 5 year, the author chose to digitized only 1957, 1962, 1967, 1968, 1968, 1970, 1972 and 1974.  
+  The dataset gives a general picture of French newspaper industry.  The scale of local newspapers is approximately one-third of the national given the daily circulation and revenue data.  One important fundamental difference between local newspapers and national for this study is the advertisement content on those two types.  "National newspapers rely to a greater extent on advertisements for brands, whose owners may also wish to advertise on television. By contrast, advertisements in local newspapers tend to feature classified ads or promote local establishments." (Angelucci, Charles, and Julia Cagé, 2019)  The targeted readers for advertisement on those two kinds of newspapers are different.  The national newspapers are under larger impact of the shock in the way that the advertising revenue has more reasons to shrink.
+  There are a lot of missing values in the dataset.  This forms a natural concern on the statistic power of the study.  Missing values can potential effect the precision of estimated changes due to the shock.  However, the authors provided a robustness check to accommodate this concern.  The robustness checks will be discussed later in this report.
+
+# Model and Results
+
+  The effect of the introduction of advertising on television is measure by DiD estimation method.  Specifically, use national newspapers as the treatment group, the control group is local newspapers who should be receiving minor impact according to authors' assumption.  The DiD estimation replies on the common trend assumption.  In context of this study, the assumption can be interpreted as follows.  In the absence of the shock created by the introduction of advertising on television, the difference between French national newspapers should be the same before and after 1967.  The variables that are taking account for the effect of the shock can be divided into four groups.   
+
+## Replication of Table 3
+```{r, echo = FALSE}
+#advertising-side models
+ad_revenue <- lm(log(ra_cst) ~ after_national + id_news + year, data = newspapers)
+
+ad_revenue_div_circulation <- lm(log(ra_cst_div_qtotal) ~ after_national + id_news + year, data = newspapers)
+
+ad_price <- lm(log(ads_p4_cst) ~ after_national + id_news + year, data = newspapers)
+
+ad_space <- lm(log(ads_s) ~ after_national + id_news + year, data = newspapers)
+
+
+#advertising-side variables
+omit_me <- c("(Intercept)", "id_news3", "id_news6", "id_news7", "id_news13", 
+             "id_news16", "id_news25", "id_news28", "id_news34", "id_news38", 
+             "id_news44", "id_news48", "id_news51", "id_news53", "id_news54", 
+             "id_news57", "id_news60", "id_news62", "id_news66", "id_news67", 
+             "id_news70", "id_news71", "id_news72", "id_news80", "id_news82", 
+             "id_news88", "id_news95", "id_news97", "id_news98", "id_news103", 
+             "id_news105", "id_news106", "id_news118", "id_news119", "id_news127", 
+             "id_news136", "id_news138", "id_news148", "id_news151", "id_news153", 
+             "id_news154", "id_news157", "id_news158", "id_news161", "id_news163", 
+             "id_news167", "id_news169", "id_news179", "id_news184", "id_news185", 
+             "id_news187", "id_news196", "id_news206", "id_news210", "id_news212", 
+             "id_news213", "id_news224", "id_news225", "id_news234", "id_news236", 
+             "id_news245", "id_news247", "id_news310", "id_news452", "id_news467", 
+             "id_news469", "id_news480", "id_news20040", "id_news20345", 
+             "id_news20346", "id_news20347", "id_news20352", "id_news20354", 
+             "id_news21006", "id_news21025", "id_news21173", "id_news21176", 
+             "id_news33718", "id_news34689", "id_news73")
+
+ad_side<-huxreg("Ad. rev." = ad_revenue, 
+       "Ad rev. div. circ." = ad_revenue_div_circulation, 
+       "Ad price" = ad_price, 
+       "Ad space" = ad_space,
+        omit_coefs = omit_me, 
+        number_format = 2
+        )
+ad_side %>% 
+  theme_article %>% 
+  set_caption("Table 1 Advertising Side")
+```
+  The group representing the effect on advertising side (Table 1) for the newspapers are advertising revenues, listed advertising price and advertising space. Since the revenue is highly dependent on the circulation of the newspaper, a circulation-wide normalization is used on advertising revenue forming a new variable.  
+
+## Replication of Table 4
+```{r, echo = FALSE}
+#consumer-side model
+subscription_price <- lm(log(ps_cst) ~ after_national + id_news + year, data = newspapers)
+unit_price <- lm(log(po_cst) ~ after_national + id_news + year, data = newspapers)
+circulation <- lm(log(qtotal) ~ after_national + id_news + year, data = newspapers)
+share_of_sub <- lm(log(qs_s) ~ after_national + id_news + year, data = newspapers)
+revenue_from_sales <- lm(log(rs_cst) ~ after_national + id_news + year, data = newspapers)
+
+#consumer-side variables
+
+
+reader_side<-huxreg("Subscription price" = subscription_price, 
+       "Unit price" = unit_price, 
+       "Circulation" = circulation, 
+       "Share of sub" = share_of_sub,
+       "Revenue from sales" = revenue_from_sales,
+       omit_coefs = omit_me, 
+       number_format = 2
+       )
+reader_side %>% 
+  theme_article %>% 
+  set_caption("Table 2 Reader Side")
+```
+  Another group of the dependent variables is called reader side.  The reader side group (Table 2) explains the indirect effect of the shock on readers.  The replicated results of these two groups is somewhat consistent with the paper.  The replicated amount of percent change in advertising price of national newspapers compared to the price of local newspaper is -31% instead of -40% as showed in paper.  Also, the effect on advertising space is positive in my replication while the paper gives a negative three percent change.  However, this change is still statistically insignificant.   My model gives a smaller estimation for the effect on listed advertising price as well as advertising space.  (with a overall smaller standard error close to zero).
+
+```{r, echo = FALSE}
+#Quality
+nb_journs <- lm(ln_nb_journ ~ after_national + id_news + year, data = newspapers)
+ave_payroll <- lm(ln_av_payroll_cst ~ after_national + id_news + year, data = newspapers)
+nb_pages <- lm(ln_pages ~ after_national + id_news + year, data = newspapers)
+newshole <- lm(ln_news_hole ~ after_national + id_news + year, data = newspapers)
+
+hard_news_share <- lm(ln_share_Hard ~ after_national +  pqr_trend + id_news + year, data = newspapers)
+
+
+
+quality<-huxreg("Number of journalists" = nb_journs, 
+       "Average payroll" = ave_payroll, 
+       "Number of pages" = nb_pages, 
+       "Newshole" = newshole,
+       "Share of hard news on front page (percent)" = hard_news_share,
+       omit_coefs = omit_me, 
+       number_format = 2
+       )
+quality%>% 
+  theme_article %>% 
+  set_caption("Table 3 Quality")
+
+```
+  The quality of one newspaper are measured by one's number of journalists and newshole.  There are a lot of missing data on the payroll variable, which weakens the power of estimation.  The replication is fairly consistent with the paper.  The change in share of hard news on front page is estimated 4% bigger than the paper.  This could be because the low number of observations.  Specifically, the data of the hard news ratio on front page only contains 37 local newspapers and 10 national newspapers from 1964 to 1972.  A lower observation weakens the prediction model.  
+
+## Replication of Table 6
+```{r, echo = FALSE}
+#Education Panel
+no_diploma<-lm(R_sh_edu_no_ipo ~ after_national + id_news + year, data = newspapers)
+pri_edu<-lm(R_sh_edu_primaire_ipo ~ after_national + id_news + year, data = newspapers)
+sec_edu<-lm(R_sh_edu_secondaire_ipo ~ after_national + id_news + year, data = newspapers)
+prof_edu<-lm(R_sh_edu_sup_prof_ipo~ after_national + id_news + year, data = newspapers)
+readership_edu<-huxreg("No diploma" = no_diploma, 
+       "Primary education" = pri_edu, 
+       "Secondary educatiion" = sec_edu, 
+       "Professional educaition" = prof_edu,
+       omit_coefs = omit_me, 
+       number_format = 2)
+readership_edu%>% 
+  theme_article %>% 
+  set_caption("Table 4 Readership: Eduction")
+
+#Socio-Professional Panel
+farmer<-lm(R_sh_pcs_agri_ipo ~ after_national + id_news + year, data = newspapers)
+art_and_shop<-lm(R_sh_pcs_patron_ipo ~ after_national + id_news + year, data = newspapers)
+senior_executives<-lm(R_sh_pcs_cadre_ipo ~ after_national + id_news + year, data = newspapers)
+employees<-lm(R_sh_pcs_employes_ipo ~ after_national + id_news + year, data = newspapers)
+labourers<-lm(R_sh_pcs_ouvriers_ipo ~ after_national + id_news + year, data = newspapers)
+inactive<-lm(R_sh_pcs_inactifs_ipo ~ after_national + id_news + year, data = newspapers)
+readership_pro<-huxreg("Farmers" = farmer,
+       "Artisans and shopkeepers" = art_and_shop,
+       "Senior executives" = senior_executives,
+       "Employees" = employees,
+       "Labourers" = labourers,
+       "Inactive" = inactive,
+       omit_coefs = omit_me,
+       number_format = 2)
+readership_pro%>% 
+  theme_article %>% 
+  set_caption("Table 5 Readership: Socio-professional category")
+```
+  Table 4 and 5 is the replication result for the effect of decreased advertising revenue on readership composition.  Due to lack of local newspaper dataset in readership, the results are only suggestive here.  Notice the shift in the readership composition, which can be explained by the shift in newspaper content from hardcore news to soft.  A smaller ratio of hard news on the front page could be less attractive to people with higher education.  Or the newspapers "chose" to shift their focus to readers with lower education to lower their cost on content producing.  This result provides consistency to the picture drawn by previous results.  
+  
+
+## Replication of Table 7
+```{r, echo = FALSE}
+
+##select necessary variables for low reliance
+low_reliance <- newspapers %>% 
+  filter(Had == "0" & national == "1")
+
+#Low reliance on advertising revenue before 1966
+low_ad_revenue<-lm(ln_ra_cst ~ after_national + id_news + year, data = low_reliance)
+low_list_price<-lm(ln_ads_p4_cst ~ after_national + id_news + year, data = low_reliance)
+low_subscription_price<-lm(ln_ps_cst ~ after_national + id_news + year, data = low_reliance)
+low_share_of_subscription<-lm(ln_qs_s ~ after_national + id_news + year, data = low_reliance)
+low_nb_journ<-lm(ln_nb_journ ~ after_national + id_news + year, data = low_reliance)
+low_newshole<-lm(ln_news_hole ~ after_national + id_news + year, data = low_reliance)
+
+#High reliance on advertising revenue before 1966
+high_reliance <- newspapers %>% 
+  filter(Had == "1" & national == "1")
+high_ad_revenue<-lm(ln_ra_cst ~ after_national + id_news + year, data = high_reliance)
+high_list_price<-lm(ln_ads_p4_cst ~ after_national + id_news + year, data = high_reliance)
+high_subscription_price<-lm(ln_ps_cst ~ after_national + id_news + year, data = high_reliance)
+high_share_of_subscription<-lm(ln_qs_s ~ after_national + id_news + year, data = high_reliance)
+high_nb_journ<-lm(ln_nb_journ ~ after_national + id_news + year, data = high_reliance)
+high_newshole<-lm(ln_news_hole ~ after_national + id_news + year, data = high_reliance)
+
+Hetero_effect<- huxreg("Low" = low_ad_revenue, "High" = high_ad_revenue, 
+                       "Low" = low_list_price, "High" = high_list_price,
+                       "Low" = low_subscription_price, "High" = high_subscription_price,
+                       "Low" = low_share_of_subscription, "High" = high_share_of_subscription,
+                       "Low" = low_nb_journ, "High" = high_nb_journ,
+                       "Low" = low_newshole, "High" = high_newshole,
+                       omit_coefs = omit_me,
+                       number_format = 2)  
+Hetero_effect %>% 
+  insert_row("","Ad revenue","", "(Listed) ad price", "", "Subscription price", "", "Share of subscribers", "", "Number of journalists", "", "Newshole", "", after = 0) %>% 
+  merge_cells(1, 2:3) %>% 
+  merge_cells(1, 4:5) %>% 
+  merge_cells(1, 6:7) %>% 
+  merge_cells(1, 8:9) %>% 
+  merge_cells(1, 10:11) %>% 
+  merge_cells(1, 12:13) %>% 
+  set_align(1, everywhere, "center") %>% 
+  set_tb_padding(1, everywhere, 0)%>% 
+  theme_article %>% 
+  set_caption("Table 6: Heterogenous Effects: Reliance on Advertising of National Daily Newspapers before the Shock")
+
+```
+  Table 6 take in account of heterogeneous effect in which the extend of reliance on the advertising revenue are different before the introduction of advertising on television.  To show newspapers with higher reliance on advertising revenue before suffers stronger effect, an OLS estimation was run on different dependent variables in newspaper industry for both the low reliance kind and high. The benchmark for high reliance is the median for reliance on advertising revenue.  After we drop the low reliance and local newspapers, there are only 91 observations left in the dataset including the ones with missing values.  The replicated result is not very statistically significant, so the interpretation is unnecessary.  The replicated results are off.  The paper did not mention the procedure to reproduce the data used for investigating the heterogeneous effect.  The results showed in the paper, however, does confirm the a higher impact on newspapers with high reliance on advertising revenue.  Except for one variable, the subscription price which shows a bigger drop in newspapers with low reliance.  The author did not mention why.  A possible explanation for this matter form me is that newspapers who did not rely much on the advertising revenue might rely on something else more than those who rely more on advertising.  What if they rely more on their revenue form subscriptions?  If so, in order to attract more subscribers in the difficult time, they have to give bigger discount on the subscription price.  
+  
+## Replication of Figure 6
+```{r, echo = FALSE}
+
+a<-lm(ln_ra_cst ~ (national*year) +id_news, data = newspapers)
+b<-lm(ln_ads_p4_cst ~ (national*year) +id_news, data = newspapers)
+c<-lm(ln_ps_cst ~ (national*year) +id_news, data = newspapers)
+d<-lm(log(qtotal) ~ (national*year) +id_news, data = newspapers)
+e<-lm(ln_nb_journ ~ (national*year) +id_news, data = newspapers)
+f<-lm(ln_news_hole ~ (national*year) +id_news, data = newspapers)
+g<-lm(R_sh_pcs_employes_ipo ~ (national*year) +id_news, data = newspapers)
+h<-lm(R_sh_pcs_agri_ouvriers_ipo ~ (national*year) +id_news, data = newspapers)
+
+parallel<-huxreg("Panel A. Advertising revenues" = a,
+       "Panel B. Advertising price" = b,
+       "Panel C. Subscription price" = c,
+       "Panel D. Circulation" = d,
+       "Panel E. Number of journalists" = e,
+       "Panel F. Newshole" = f,
+       "Panel G. Readership: Percent employees" = g,
+       "Panel H. Readership: Percent farmers and labourers" = h,
+                       omit_coefs = omit_me,
+                       number_format = 2) 
+parallel %>% 
+  theme_article %>% 
+  set_caption("Table7: Controlling For Parallel Trend")
+
+```
+
+To check the validity of DiD estimation, the model interacts the year fixed effect with national newspaper indicator variable.  The coefficients replicated are all very small, which is just as expected.  However, for Panel G and H, the coefficients show something interesting.  The coefficient of the interact term in Panel G suggests that employee share in readership decreased as suggested in the Table 5.  The coefficient of the interact term in Panel H suggests an increase in readers with lower educations as suggested in the Table 5.  The negative 0.06 in Panel B can easily be explained by newspapers' adjustment under the impact of television advertising.  The results are consistent the paper.  
+
+# Discussion
+
+  The paper has an out-standing robustness check on the results.  One interesting check is Weighting Newspapers by Their Circulation.  Is circulation the only worthy factor when weighting the newspapers?  The circulation of newspapers itself dependents on many other factors.  While the individual characteristic of each newspaper is capture in terms of assigning each newspaper with an ID, there are different things happening in different industries.  Therefore newspapers for a specific industry, for example politics, should be accommodate with specific time trend.  An Industry-Specific Time Trend robustness check was also provided by the author.  This is necessary especially in the context of France as in 1960s, the politics is very active in France.  The printed press were free, but the television and broadcasts were under government control (Kuhn, 2006).  The preference between newspaper and television might shift when the government is under an unstable condition.  The choice of accessing information depends  on not only the time, but what was happening at the time.  Of course we cannot add fixed time effect whenever something happened that caused a shift in people's preferences.  The best that was done is by adding the annual adjustment to the model.  However, the unstable politics could potentially offset the changes in newspaper industry due to the shock of 1967.  
+  The mean unit price of national newspaper is 3.6 euros which is higher than local newspapers.  The decreased subscription price of national newspapers make it more accessible to people who were unable to afford.  This group of people who probably haven't read national newspapers before are now able to afford.  If they didn't even know what was the content of national newspapers before, how would they subscribe due to the adjustment in contents?  The factor that triggered them to subscribe is just the affordable price to them.  After they joined the readership of national newspapers, they made up the increased portion on lower educational level readers because they have relatively lower income.  Therefore we cannot interpret the shift in readership composition is purely because of the "lower quality" of the national newspapers.  There is an asymmetric information issue to the new subscribers.  
+  Also, the decrease in the portion of artisans and shopkeepers have other alternative explanations.  Considering the relatively free working environment of shopkeepers, it is likely that they have access to news during work already.  When local advertising companies aired on television, some useful pecieces of information were able to be received more efficient for someone who already have access of television or radio.   For example, some convenience stores have their radio on in the background, restaurants sometimes have television installed to attract more customers as well.  When the advertising on television was introduced,they might choose to save the money on subscribing newspapers.  When this situation is considered, the percent decrease in artisans and shopkeepers share of the national readership is actually over-estimated.
+  One further improvement can be taken on precision and accuracy of estimation is solving for the missing data.  There are too many missing values especially for the dependent variable, share of subscribers.  Even the robustness check on Balanced Sample provided by the author failed on this variable.  The data collecting process for this study was challenging.  Even with much more advanced technology, if one want to mine data as ancient as the time period investigated in the paper, digitization is still an indispensable step.  
+  There are some other independent variables can be added to the OLS model.  Aside of time and newspaper fixed effects, geographic effect can be added and used to explain the unit sale and number of subscribers.  Moreover, the investigation on different national and local newspapers for different industries can also add some accuracy to the model.  For example, we can categorize financial newspapers as one group and run OLS estimation on them with more precised fixed effect variables, and then political newspapers as another and so on.  
+  
+# References
+
+Angelucci, Charles, and Julia Cagé. 2019. "Newspapers in Times of Low Advertising		Revenues." American Economic Journal: Microeconomics, 11 (3): 319-64.DOI:		 10.1257/mic.20170306
+David Hugh-Jones (2020). huxtable: Easily Create and Style Tables for LaTeX, HTML and Other		 Formats. R package version 5.1.1. https://CRAN.R-project.org/package=huxtable
+H. Wickham. ggplot2: Elegant Graphics for Data Analysis. Springer-Verlag New York, 2016.
+Hadley Wickham and Dana Seidel (2020). scales: Scale Functions for Visualization. R package		version 1.1.1. https://CRAN.R-project.org/package=scales
+Hadley Wickham and Evan Miller (2020). haven: Import and Export 'SPSS', 'Stata' and 'SAS' Files.		R package version 2.3.1. https://CRAN.R-project.org/package=haven
+Kirill Müller (2020). here: A Simpler Way to Find Your Files. R package version 1.0.1.	https://CRAN.R-project.org/package=here
+Raymond Kuhn (2006). The Media in France. Routledge. pp. 70–180. ISBN 9781134980536.
+Wickham et al., (2019). Welcome to the tidyverse. Journal of Open Source Software, 4(43),		1686, https://doi.org/10.21105/joss.01686
+Wickham et al., (2019). Welcome to the tidyverse. Journal of Open Source Software, 4(43),		1686, https://doi.org/10.21105/joss.01686
+
+
