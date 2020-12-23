@@ -61,7 +61,7 @@ newspapers <-
 
   The effect of the introduction of advertising on television is measure by DiD estimation method.  Specifically, use national newspapers as the treatment group, the control group is local newspapers who should be receiving minor impact according to authors' assumption.  The DiD estimation replies on the common trend assumption.  In context of this study, the assumption can be interpreted as follows.  In the absence of the shock created by the introduction of advertising on television, the difference between French national newspapers should be the same before and after 1967.  The variables that are taking account for the effect of the shock can be divided into four groups.   
 
-## Replication of Table 3
+
 ```{r, echo = FALSE}
 #advertising-side models
 ad_revenue <- lm(log(ra_cst) ~ after_national + id_news + year, data = newspapers)
@@ -101,12 +101,13 @@ ad_side<-huxreg("Ad. rev." = ad_revenue,
         )
 ad_side %>% 
   theme_article %>% 
-  set_caption("Table 1 Advertising Side")
+  set_caption("Advertising Side")
 ```
   The group representing the effect on advertising side (Table 1) for the newspapers are advertising revenues, listed advertising price and advertising space. Since the revenue is highly dependent on the circulation of the newspaper, a circulation-wide normalization is used on advertising revenue forming a new variable.  
 
-## Replication of Table 4
+
 ```{r, echo = FALSE}
+#table 2
 #consumer-side model
 subscription_price <- lm(log(ps_cst) ~ after_national + id_news + year, data = newspapers)
 unit_price <- lm(log(po_cst) ~ after_national + id_news + year, data = newspapers)
@@ -125,9 +126,19 @@ reader_side<-huxreg("Subscription price" = subscription_price,
        omit_coefs = omit_me, 
        number_format = 2
        )
-reader_side %>% 
-  theme_article %>% 
-  set_caption("Table 2 Reader Side")
+
+
+reader_side <- reader_side %>% 
+  split_down(., "Circulation") 
+reader_side[[1]] %>% 
+  theme_article() %>% 
+  set_caption("Reader Side")
+reader_side[[2]] %>% 
+  theme_article() %>% 
+  set_caption("Reader Side")
+  
+
+
 ```
   Another group of the dependent variables is called reader side.  The reader side group (Table 2) explains the indirect effect of the shock on readers.  The replicated results of these two groups is somewhat consistent with the paper.  The replicated amount of percent change in advertising price of national newspapers compared to the price of local newspaper is -31% instead of -40% as showed in paper.  Also, the effect on advertising space is positive in my replication while the paper gives a negative three percent change.  However, this change is still statistically insignificant.   My model gives a smaller estimation for the effect on listed advertising price as well as advertising space.  (with a overall smaller standard error close to zero).
 
@@ -146,28 +157,38 @@ quality<-huxreg("Number of journalists" = nb_journs,
        "Average payroll" = ave_payroll, 
        "Number of pages" = nb_pages, 
        "Newshole" = newshole,
-       "Share of hard news on front page (percent)" = hard_news_share,
+       "Share of hard 
+       news on 
+       front page (percent)" = hard_news_share,
        omit_coefs = omit_me, 
        number_format = 2
        )
-quality%>% 
-  theme_article %>% 
-  set_caption("Table 3 Quality")
-
+quality <- quality%>% 
+  split_down(., "Number of pages")
+quality[[1]]%>% 
+  theme_article() %>% 
+  set_caption("Quality")
+quality[[1]]%>% 
+  theme_article() %>% 
+  set_caption("Quality")
 ```
   The quality of one newspaper are measured by one's number of journalists and newshole.  There are a lot of missing data on the payroll variable, which weakens the power of estimation.  The replication is fairly consistent with the paper.  The change in share of hard news on front page is estimated 4% bigger than the paper.  This could be because the low number of observations.  Specifically, the data of the hard news ratio on front page only contains 37 local newspapers and 10 national newspapers from 1964 to 1972.  A lower observation weakens the prediction model.  
 
-## Replication of Table 6
+
 ```{r, echo = FALSE}
 #Education Panel
 no_diploma<-lm(R_sh_edu_no_ipo ~ after_national + id_news + year, data = newspapers)
 pri_edu<-lm(R_sh_edu_primaire_ipo ~ after_national + id_news + year, data = newspapers)
 sec_edu<-lm(R_sh_edu_secondaire_ipo ~ after_national + id_news + year, data = newspapers)
 prof_edu<-lm(R_sh_edu_sup_prof_ipo~ after_national + id_news + year, data = newspapers)
-readership_edu<-huxreg("No diploma" = no_diploma, 
-       "Primary education" = pri_edu, 
-       "Secondary educatiion" = sec_edu, 
-       "Professional educaition" = prof_edu,
+readership_edu<-huxreg("No 
+                       diploma" = no_diploma, 
+       "Primary 
+       education" = pri_edu, 
+       "Secondary 
+       educatiion" = sec_edu, 
+       "Professional 
+       educaition" = prof_edu,
        omit_coefs = omit_me, 
        number_format = 2)
 readership_edu%>% 
@@ -182,21 +203,29 @@ employees<-lm(R_sh_pcs_employes_ipo ~ after_national + id_news + year, data = ne
 labourers<-lm(R_sh_pcs_ouvriers_ipo ~ after_national + id_news + year, data = newspapers)
 inactive<-lm(R_sh_pcs_inactifs_ipo ~ after_national + id_news + year, data = newspapers)
 readership_pro<-huxreg("Farmers" = farmer,
-       "Artisans and shopkeepers" = art_and_shop,
+       "Artisans 
+       and shopkeepers" = art_and_shop,
        "Senior executives" = senior_executives,
        "Employees" = employees,
        "Labourers" = labourers,
        "Inactive" = inactive,
        omit_coefs = omit_me,
        number_format = 2)
-readership_pro%>% 
-  theme_article %>% 
-  set_caption("Table 5 Readership: Socio-professional category")
+readership_pro<-readership_pro%>% 
+  split_down(., "Senior executives")
+readership_pro[[1]]%>% 
+  theme_article() %>% 
+  set_caption("Quality")
+readership_pro[[2]]%>% 
+  theme_article() %>% 
+  set_caption("Quality")
+
+
 ```
   Table 4 and 5 is the replication result for the effect of decreased advertising revenue on readership composition.  Due to lack of local newspaper dataset in readership, the results are only suggestive here.  Notice the shift in the readership composition, which can be explained by the shift in newspaper content from hardcore news to soft.  A smaller ratio of hard news on the front page could be less attractive to people with higher education.  Or the newspapers "chose" to shift their focus to readers with lower education to lower their cost on content producing.  This result provides consistency to the picture drawn by previous results.  
   
 
-## Replication of Table 7
+
 ```{r, echo = FALSE}
 
 ##select necessary variables for low reliance
@@ -229,7 +258,7 @@ Hetero_effect<- huxreg("Low" = low_ad_revenue, "High" = high_ad_revenue,
                        "Low" = low_newshole, "High" = high_newshole,
                        omit_coefs = omit_me,
                        number_format = 2)  
-Hetero_effect %>% 
+Hetero_effect <- Hetero_effect %>% 
   insert_row("","Ad revenue","", "(Listed) ad price", "", "Subscription price", "", "Share of subscribers", "", "Number of journalists", "", "Newshole", "", after = 0) %>% 
   merge_cells(1, 2:3) %>% 
   merge_cells(1, 4:5) %>% 
@@ -237,15 +266,19 @@ Hetero_effect %>%
   merge_cells(1, 8:9) %>% 
   merge_cells(1, 10:11) %>% 
   merge_cells(1, 12:13) %>% 
-  set_align(1, everywhere, "center") %>% 
-  set_tb_padding(1, everywhere, 0)%>% 
+  split_down(., after = 7)
+Hetero_effect[[1]] %>% 
   theme_article %>% 
-  set_caption("Table 6: Heterogenous Effects: Reliance on Advertising of National Daily Newspapers before the Shock")
+  set_caption("Heterogenous Effects: Reliance on Advertising of National Daily Newspapers before the Shock")
+Hetero_effect[[2]] %>% 
+  theme_article %>% 
+  set_caption("Heterogenous Effects: Reliance on Advertising of National Daily Newspapers before the Shock")
+
 
 ```
   Table 6 take in account of heterogeneous effect in which the extend of reliance on the advertising revenue are different before the introduction of advertising on television.  To show newspapers with higher reliance on advertising revenue before suffers stronger effect, an OLS estimation was run on different dependent variables in newspaper industry for both the low reliance kind and high. The benchmark for high reliance is the median for reliance on advertising revenue.  After we drop the low reliance and local newspapers, there are only 91 observations left in the dataset including the ones with missing values.  The replicated result is not very statistically significant, so the interpretation is unnecessary.  The replicated results are off.  The paper did not mention the procedure to reproduce the data used for investigating the heterogeneous effect.  The results showed in the paper, however, does confirm the a higher impact on newspapers with high reliance on advertising revenue.  Except for one variable, the subscription price which shows a bigger drop in newspapers with low reliance.  The author did not mention why.  A possible explanation for this matter form me is that newspapers who did not rely much on the advertising revenue might rely on something else more than those who rely more on advertising.  What if they rely more on their revenue form subscriptions?  If so, in order to attract more subscribers in the difficult time, they have to give bigger discount on the subscription price.  
   
-## Replication of Figure 6
+
 ```{r, echo = FALSE}
 
 a<-lm(ln_ra_cst ~ (national*year) +id_news, data = newspapers)
@@ -263,13 +296,30 @@ parallel<-huxreg("Panel A. Advertising revenues" = a,
        "Panel D. Circulation" = d,
        "Panel E. Number of journalists" = e,
        "Panel F. Newshole" = f,
-       "Panel G. Readership: Percent employees" = g,
-       "Panel H. Readership: Percent farmers and labourers" = h,
+       "Panel G. 
+       Readership: 
+       Percent employees" = g,
+       "Panel H. 
+       Readership: 
+       Percent farmers 
+       and labourers" = h,
                        omit_coefs = omit_me,
                        number_format = 2) 
-parallel %>% 
+parallel <- parallel %>% 
+  split_down(., after = c(3,5,7))
+parallel[[1]] %>% 
   theme_article %>% 
-  set_caption("Table7: Controlling For Parallel Trend")
+  set_caption("Controlling For Parallel Trend")
+parallel[[2]] %>% 
+  theme_article %>% 
+  set_caption("Controlling For Parallel Trend")
+parallel[[3]] %>% 
+  theme_article %>% 
+  set_caption("Controlling For Parallel Trend")
+parallel[[4]] %>% 
+  theme_article %>% 
+  set_caption("Controlling For Parallel Trend")
+
 
 ```
 
